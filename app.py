@@ -150,4 +150,4 @@ def get_user_data(current_user):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='159.89.13.182')

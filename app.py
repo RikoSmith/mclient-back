@@ -15,6 +15,7 @@ app.config["SECRET_KEY"] = "this is my secret key 1245215"
 
 db = SQLAlchemy(app)
 
+
 # ------------------DATABASE --------------------------------------
 
 
@@ -46,7 +47,7 @@ class Slinks(db.Model):
 
 class Fdata(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer)
+    user_id = db.Column(db.String(150))
     weight = db.Column(db.Integer)
     mood = db.Column(db.String(200))
     hbeat = db.Column(db.Integer)
@@ -68,16 +69,18 @@ def token_checker(f):
 
         if 'x-access-token' in request.headers:
             token = request.headers['x-access-token']
+            print(request.headers['x-access-token'])
 
         if not token:
-            return jsonify({"ok": False, "message": "Token is missing!"}), 401
+            print(request.headers)
+            return jsonify({"ok": False, "message": "Token is missing!"})
 
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'])
             current_user = User.query.filter_by(
                 user_id=data['user_id']).first()
         except:
-            return jsonify({"ok": False, "message": "Token is invalid"}), 401
+            return jsonify({"ok": False, "message": "Token is invalid"})
 
         return f(current_user, *args, **kwargs)
 
@@ -85,27 +88,6 @@ def token_checker(f):
 
 
 # ---------------------- ROUTES --------------------------------------
-
-
-@app.route('/signup', methods=['POST'])
-def signup():
-    data = request.get_json()
-    hashed_password = generate_password_hash(data['password'], method='sha256')
-
-    new_user = User(user_id=str(uuid.uuid4(
-    )), uname=data['uname'], name=data['name'], lname=data['lname'], sex=data['sex'], password=hashed_password)
-
-    if(data['quote']):
-        new_user.quote = data['quote']
-
-    if(data['country']):
-        new_user.country = data['country']
-
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({"ok": True, "message": "New user created!"})
-
-
 @app.route('/login', methods=['POST'])
 def login():
 
@@ -125,11 +107,23 @@ def login():
     return make_response('Verification error', 401, {"WWW-Authentificate": "Login required"})
 
 
-@app.route('/users', methods=['GET'])
-@token_checker
-def get_all_users(current_user):
+@app.route('/user', methods=['POST'])
+def signup():
+    data = request.get_json()
+    hashed_password = generate_password_hash(data['password'], method='sha256')
 
-    return 'TODO: Returns list all users'
+    new_user = User(user_id=str(uuid.uuid4(
+    )), uname=data['uname'], name=data['name'], lname=data['lname'], sex=data['sex'], password=hashed_password)
+
+    if(data['quote']):
+        new_user.quote = data['quote']
+
+    if(data['country']):
+        new_user.country = data['country']
+
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({"ok": True, "message": "New user created!"})
 
 
 @app.route('/user', methods=['GET'])
@@ -147,6 +141,36 @@ def get_user_data(current_user):
     user_data["country"] = user.country
 
     return jsonify({"ok": "true", "user": user_data})
+
+
+@app.route('/fdata', methods=['GET'])
+@token_checker
+def get_user_fdata(current_user):
+    print(current_user.user_id)
+    udata = Fdata.query.filter_by(user_id=current_user.user_id).first()
+
+    if not udata:
+        return jsonify({"ok": "false", "message": "No data to display"})
+
+    user_fdata = {}
+    user_fdata["mood"] = udata.mood
+    user_fdata["weight"] = udata.weight
+    user_fdata["hbeat"] = udata.hbeat
+
+    return jsonify({"ok": "true", "fdata": user_fdata})
+
+
+@app.route('/fdata', methods=['POST'])
+@token_checker
+def update_user_fdata(current_user):
+
+    data = request.form
+    new_fdata = Fdata(user_id=current_user.user_id,
+                      mood=data["mood"], hbeat=data["hbeat"], weight=data["weight"])
+
+    db.session.add(new_fdata)
+    db.session.commit()
+    return jsonify({"ok": "true", "message": "Fdata updated"})
 
 
 if __name__ == '__main__':

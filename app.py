@@ -165,6 +165,13 @@ def get_user_fdata(current_user):
 def update_user_fdata(current_user):
 
     data = request.form
+
+    if(data["audio"]):
+        # TODO: script for audio recognizing ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------------------------------------------
+        # ---------------------------------------------------------------------------------------------------------
+        print("Audio feature extraction")
+
     new_fdata = Fdata(user_id=current_user.user_id,
                       mood=data["mood"], hbeat=data["hbeat"], weight=data["weight"])
 

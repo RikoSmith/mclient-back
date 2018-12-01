@@ -1,3 +1,5 @@
+import os.path
+import os
 import librosa
 import librosa.display
 import numpy as np
@@ -193,8 +195,14 @@ def get_user_fdata(current_user):
 def update_user_fdata(current_user):
 
     data = request.form
+    files = request.files
+    print(data)
+    print(request.files)
 
-    if(data["audio"]):
+    if(files["audio"]):
+        print(files["audio"])
+        files["audio"].save('tempFiles/' + files["audio"].filename)
+
         def extract_feature(file_name, offst=0.5):
             X, sample_rate = librosa.load(
                 file_name, res_type='kaiser_fast', offset=offst)
@@ -212,7 +220,7 @@ def update_user_fdata(current_user):
             return mfccs, chroma, mel, contrast, tonnetz
 
         mfccs, chroma, mel, contrast, tonnetz = extract_feature(
-            'tempFiles/angry_female.wav', 0)
+            'tempFiles/'+files["audio"].filename, 0)
         ext_features = np.hstack([mfccs, chroma, mel, contrast, tonnetz])
 
         live = pd.DataFrame(data=ext_features)
@@ -247,13 +255,14 @@ def update_user_fdata(current_user):
 
         livepredictions = conv[liveabc[0]]
         print("Result: " + livepredictions)
+        os.remove('tempFiles/' + files["audio"].filename)
 
     new_fdata = Fdata(user_id=current_user.user_id,
                       mood=data["mood"], hbeat=data["hbeat"], weight=data["weight"])
 
     db.session.add(new_fdata)
     db.session.commit()
-    return jsonify({"ok": "true", "message": "Fdata updated"})
+    return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
 
 
 if __name__ == '__main__':

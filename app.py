@@ -1,3 +1,24 @@
+import librosa
+import librosa.display
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from matplotlib.pyplot import specgram
+import keras
+from keras.preprocessing import sequence
+from keras.models import Sequential
+from keras.layers import Dense, Embedding, Activation
+from keras.layers import LSTM
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical
+from keras.layers import Conv1D, MaxPooling1D, AveragePooling1D
+from keras.models import Model
+from keras.callbacks import ModelCheckpoint
+from sklearn.metrics import confusion_matrix
+from keras import regularizers
+import os
+import pandas as pd
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 import uuid
@@ -5,6 +26,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 from functools import wraps
+from keras.layers import Input, Flatten, Dropout  # , Activation
+
+
+#from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+#from tensorflow.keras.models import Sequential
+#from tensorflow.keras.layers import LSTM, Activation, Dense,  Embedding
+
 
 app = Flask(__name__)
 
@@ -167,10 +195,58 @@ def update_user_fdata(current_user):
     data = request.form
 
     if(data["audio"]):
-        # TODO: script for audio recognizing ----------------------------------------------------------------------
-        # ---------------------------------------------------------------------------------------------------------
-        # ---------------------------------------------------------------------------------------------------------
-        print("Audio feature extraction")
+        def extract_feature(file_name, offst=0.5):
+            X, sample_rate = librosa.load(
+                file_name, res_type='kaiser_fast', offset=offst)
+            stft = np.abs(librosa.stft(X))
+            mfccs = np.mean(librosa.feature.mfcc(
+                y=X, sr=sample_rate, n_mfcc=40).T, axis=0)
+            chroma = np.mean(librosa.feature.chroma_stft(
+                S=stft, sr=sample_rate).T, axis=0)
+            mel = np.mean(librosa.feature.melspectrogram(
+                X, sr=sample_rate).T, axis=0)
+            contrast = np.mean(librosa.feature.spectral_contrast(
+                S=stft, sr=sample_rate).T, axis=0)
+            tonnetz = np.mean(librosa.feature.tonnetz(
+                y=librosa.effects.harmonic(X), sr=sample_rate).T, axis=0)
+            return mfccs, chroma, mel, contrast, tonnetz
+
+        mfccs, chroma, mel, contrast, tonnetz = extract_feature(
+            'tempFiles/angry_female.wav', 0)
+        ext_features = np.hstack([mfccs, chroma, mel, contrast, tonnetz])
+
+        live = pd.DataFrame(data=ext_features)
+        live = live.stack().to_frame().T
+        livecnn = np.expand_dims(live, axis=2)
+        # loading json and creating model
+        from keras.models import model_from_json
+
+        json_file5 = open(
+            'model/2_class_stress_out_of_8_class_En.json', 'r')
+
+        eng2 = json_file5.read()
+        json_file5.close()
+
+        eng_stress_model = model_from_json(eng2)
+
+        # load weights into new model
+        eng_stress_model.load_weights(
+            "model/2_class_stress_out_of_8_class_En.h5")
+        print("Loaded model from disk")
+
+        opt = keras.optimizers.rmsprop(lr=0.00001, decay=1e-6)
+        eng_stress_model.compile(
+            loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+        livepreds = eng_stress_model.predict(livecnn,
+                                             batch_size=32,
+                                             verbose=1)
+
+        livepreds1 = livepreds.argmax(axis=1)
+        liveabc = livepreds1.astype(int).flatten()
+        conv = ['not_stressed', 'stressed']
+
+        livepredictions = conv[liveabc[0]]
+        print("Result: " + livepredictions)
 
     new_fdata = Fdata(user_id=current_user.user_id,
                       mood=data["mood"], hbeat=data["hbeat"], weight=data["weight"])

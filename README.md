@@ -1,5 +1,5 @@
 # mclient-back
 
-How to start:
-  .\env\Scripts\activate
-  python app.py
+  How to start:
+    1. .\env\Scripts\activate
+    2. python app.py

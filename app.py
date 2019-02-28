@@ -276,9 +276,8 @@ def audio_data(current_user):
 
     if(data["audio"]):
         # print(data["audio"])
-        audio_64 = base64.b64decode(
-            data["audio"] + '=' * (-len(data["audio"]) % 4))
-        #audio_64 = base64.b64decode(data["audio"])
+        #audio_64 = base64.b64decode(data["audio"] + '=' * (-len(data["audio"]) % 4))
+        audio_64 = base64.b64decode(data["audio"])
         audio_file = open('tempFiles/audio.wav', 'wb')
         audio_file.write(audio_64)
 

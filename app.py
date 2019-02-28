@@ -278,7 +278,7 @@ def audio_data(current_user):
         # print(data["audio"])
         #audio_64 = base64.b64decode(data["audio"] + '=' * (-len(data["audio"]) % 4))
         audio_64 = base64.b64decode(data["audio"])
-        audio_file = open('tempFiles/audio.wav', 'wb')
+        audio_file = open('tempFiles/audio2.wav', 'wb')
         audio_file.write(audio_64)
 
         def extract_feature(file_name, offst=0.5):
@@ -298,7 +298,7 @@ def audio_data(current_user):
             return mfccs, chroma, mel, contrast, tonnetz
 
         mfccs, chroma, mel, contrast, tonnetz = extract_feature(
-            'tempFiles/audio.wav', 0)
+            'tempFiles/audio2.wav', 0)
         ext_features = np.hstack([mfccs, chroma, mel, contrast, tonnetz])
 
         live = pd.DataFrame(data=ext_features)

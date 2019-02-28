@@ -30,7 +30,7 @@ import jwt
 import datetime
 from functools import wraps
 from keras.layers import Input, Flatten, Dropout  # , Activation
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 
 
 #from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
@@ -338,6 +338,7 @@ def audio_data(current_user):
 
 @app.route('/test_web', methods=['POST'])
 @token_checker
+@cross_origin()
 def audio_data_web(current_user):
 
     data = request.form

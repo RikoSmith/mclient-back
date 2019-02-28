@@ -337,7 +337,6 @@ def audio_data(current_user):
 
 
 @app.route('/test_web', methods=['POST'])
-@cross_origin()
 @token_checker
 def audio_data_web(current_user):
 

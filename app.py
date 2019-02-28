@@ -30,6 +30,7 @@ import jwt
 import datetime
 from functools import wraps
 from keras.layers import Input, Flatten, Dropout  # , Activation
+from flask_cors import CORS
 
 
 #from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
@@ -38,6 +39,7 @@ from keras.layers import Input, Flatten, Dropout  # , Activation
 
 
 app = Flask(__name__)
+CORS(app)
 
 app.config["SQLALCHEMY_ECHO"] = False
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True

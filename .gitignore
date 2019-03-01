@@ -2,4 +2,5 @@ env/
 .vscode
 __pycache__
 tempFiles/*
+tempFiles_web/*
 **/*.pyc

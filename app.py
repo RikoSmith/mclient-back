@@ -193,6 +193,7 @@ def get_user_fdata(current_user):
     return jsonify({"ok": "true", "fdata": user_fdata})
 
 
+'''
 @app.route('/fdata', methods=['POST'])
 @token_checker
 def update_user_fdata(current_user):
@@ -266,6 +267,7 @@ def update_user_fdata(current_user):
     db.session.add(new_fdata)
     db.session.commit()
     return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
+'''
 
 
 @app.route('/test', methods=['POST'])
@@ -277,78 +279,13 @@ def audio_data(current_user):
     if(data["audio"]):
         # print(data["audio"])
         #audio_64 = base64.b64decode(data["audio"] + '=' * (-len(data["audio"]) % 4))
+        print("Audio: start")
+        print(data["audio"][0:100])
         audio_64 = base64.b64decode(data["audio"])
-        audio_file = open('tempFiles/audio2.wav', 'wb')
+        os.remove('tempFiles/audio.wav')
+        audio_file = open('tempFiles/audio.wav', 'wb')
         audio_file.write(audio_64)
-
-        def extract_feature(file_name, offst=0.5):
-            X, sample_rate = librosa.load(
-                file_name, res_type='kaiser_fast', offset=offst)
-            stft = np.abs(librosa.stft(X))
-            mfccs = np.mean(librosa.feature.mfcc(
-                y=X, sr=sample_rate, n_mfcc=40).T, axis=0)
-            chroma = np.mean(librosa.feature.chroma_stft(
-                S=stft, sr=sample_rate).T, axis=0)
-            mel = np.mean(librosa.feature.melspectrogram(
-                X, sr=sample_rate).T, axis=0)
-            contrast = np.mean(librosa.feature.spectral_contrast(
-                S=stft, sr=sample_rate).T, axis=0)
-            tonnetz = np.mean(librosa.feature.tonnetz(
-                y=librosa.effects.harmonic(X), sr=sample_rate).T, axis=0)
-            return mfccs, chroma, mel, contrast, tonnetz
-
-        mfccs, chroma, mel, contrast, tonnetz = extract_feature(
-            'tempFiles/audio2.wav', 0)
-        ext_features = np.hstack([mfccs, chroma, mel, contrast, tonnetz])
-
-        live = pd.DataFrame(data=ext_features)
-        live = live.stack().to_frame().T
-        livecnn = np.expand_dims(live, axis=2)
-        # loading json and creating model
-        from keras.models import model_from_json
-
-        json_file5 = open(
-            'model/2_class_stress_out_of_8_class_En.json', 'r')
-
-        eng2 = json_file5.read()
-        json_file5.close()
-
-        eng_stress_model = model_from_json(eng2)
-
-        # load weights into new model
-        eng_stress_model.load_weights(
-            "model/2_class_stress_out_of_8_class_En.h5")
-        print("Loaded model from disk")
-
-        opt = keras.optimizers.rmsprop(lr=0.00001, decay=1e-6)
-        eng_stress_model.compile(
-            loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-        livepreds = eng_stress_model.predict(livecnn,
-                                             batch_size=32,
-                                             verbose=1)
-
-        livepreds1 = livepreds.argmax(axis=1)
-        liveabc = livepreds1.astype(int).flatten()
-        conv = ['not_stressed', 'stressed']
-
-        livepredictions = conv[liveabc[0]]
-        print("Result: " + livepredictions)
-        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
-
-
-@app.route('/test_web', methods=['POST'])
-@token_checker
-@cross_origin()
-def audio_data_web(current_user):
-
-    data = request.form
-    files = request.files
-    print(data)
-    print(request.files)
-
-    if(files["audio"]):
-        print(files["audio"])
-        files["audio"].save('tempFiles/audio.wav')
+        audio_file.close()
 
         def extract_feature(file_name, offst=0.5):
             X, sample_rate = librosa.load(
@@ -387,6 +324,76 @@ def audio_data_web(current_user):
         # load weights into new model
         eng_stress_model.load_weights(
             "model/2_class_stress_out_of_8_class_En.h5")
+        print("Loaded model from disk")
+
+        opt = keras.optimizers.rmsprop(lr=0.00001, decay=1e-6)
+        eng_stress_model.compile(
+            loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+        livepreds = eng_stress_model.predict(livecnn,
+                                             batch_size=32,
+                                             verbose=1)
+
+        livepreds1 = livepreds.argmax(axis=1)
+        liveabc = livepreds1.astype(int).flatten()
+        conv = ['not_stressed', 'stressed']
+
+        livepredictions = conv[liveabc[0]]
+        print("Result: " + livepredictions)
+        # os.remove('tempFiles/audio.wav')
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
+
+
+@app.route('/test_web', methods=['POST'])
+@token_checker
+@cross_origin()
+def audio_data_web(current_user):
+
+    data = request.form
+    files = request.files
+    print(data)
+    print(request.files)
+
+    if(files["audio"]):
+        print(files["audio"])
+        files["audio"].save('tempFiles_web/audio.wav')
+
+        def extract_feature(file_name, offst=0.5):
+            X, sample_rate = librosa.load(
+                file_name, res_type='kaiser_fast', offset=offst)
+            stft = np.abs(librosa.stft(X))
+            mfccs = np.mean(librosa.feature.mfcc(
+                y=X, sr=sample_rate, n_mfcc=40).T, axis=0)
+            chroma = np.mean(librosa.feature.chroma_stft(
+                S=stft, sr=sample_rate).T, axis=0)
+            mel = np.mean(librosa.feature.melspectrogram(
+                X, sr=sample_rate).T, axis=0)
+            contrast = np.mean(librosa.feature.spectral_contrast(
+                S=stft, sr=sample_rate).T, axis=0)
+            tonnetz = np.mean(librosa.feature.tonnetz(
+                y=librosa.effects.harmonic(X), sr=sample_rate).T, axis=0)
+            return mfccs, chroma, mel, contrast, tonnetz
+
+        mfccs, chroma, mel, contrast, tonnetz = extract_feature(
+            'tempFiles_web/audio.wav', 0)
+        ext_features = np.hstack([mfccs, chroma, mel, contrast, tonnetz])
+
+        live = pd.DataFrame(data=ext_features)
+        live = live.stack().to_frame().T
+        livecnn = np.expand_dims(live, axis=2)
+        # loading json and creating model
+        from keras.models import model_from_json
+
+        json_file5 = open(
+            'model_web/2_class_stress_out_of_8_class_En.json', 'r')
+
+        eng2 = json_file5.read()
+        json_file5.close()
+
+        eng_stress_model = model_from_json(eng2)
+
+        # load weights into new model
+        eng_stress_model.load_weights(
+            "model_web/2_class_stress_out_of_8_class_En.h5")
         print("Loaded model from disk")
 
         opt = keras.optimizers.rmsprop(lr=0.00001, decay=1e-6)

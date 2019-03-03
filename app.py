@@ -282,7 +282,7 @@ def audio_data(current_user):
         print("Audio: start")
         print(data["audio"][0:100])
         audio_64 = base64.b64decode(data["audio"])
-        os.remove('tempFiles/audio.wav')
+        # os.remove('tempFiles/audio.wav')
         audio_file = open('tempFiles/audio.wav', 'wb')
         audio_file.write(audio_64)
         audio_file.close()

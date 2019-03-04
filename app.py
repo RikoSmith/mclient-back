@@ -412,5 +412,17 @@ def audio_data_web(current_user):
         return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
 
 
+@app.route('/test_feature', methods=['POST'])
+@token_checker
+def audio_data_feature(current_user):
+
+    data = request.form
+
+    if(data["features"]):
+        print(data["features"])
+
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": "stressed"})
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

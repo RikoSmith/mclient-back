@@ -1,6 +1,7 @@
 import os.path
 import os
 import base64
+import json
 import librosa
 import librosa.display
 import numpy as np
@@ -270,6 +271,66 @@ def update_user_fdata(current_user):
 '''
 
 
+@app.route('/test_feature', methods=['POST'])
+@token_checker
+def audio_data_feature(current_user):
+
+    data = request.form
+
+    if(data["features"]):
+        print(data["features"])
+        j_data = json.loads(data["features"])
+        mfccs = j_data['fe']
+        print(mfccs)
+        print(mfccs[0])
+
+        live = pd.DataFrame(data=mfccs)
+        live = live.stack().to_frame().T
+
+        livecnn = np.expand_dims(live, axis=2)
+
+        # loading json and creating model with 4 classes
+        from keras.models import model_from_json
+        json_file5 = open(
+            'model/Stress_recog_MFCC_with_gender.json', 'r')
+        eng2 = json_file5.read()
+        json_file5.close()
+        eng_stress_model = model_from_json(eng2)
+
+        # load weights into new model
+        eng_stress_model.load_weights(
+            "model/Stress_recog_MFCC_with_gender.h5")
+        print("Loaded model from disk")
+
+        # compile the model
+        opt = keras.optimizers.rmsprop(lr=0.00001, decay=1e-6)
+        eng_stress_model.compile(
+            loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+
+        # predict!
+        livepreds = eng_stress_model.predict(livecnn,
+                                             batch_size=32,
+                                             verbose=1)
+
+        # convert prediction to text
+        livepreds1 = livepreds.argmax(axis=1)
+        liveabc = livepreds1.astype(int).flatten()
+        conv = ['female_not_stressed', 'female_stressed', 'male_not_stressed',
+                'male_stressed']
+
+        # array for conversion into binary class (stressed/not_stressed)
+        conv2 = ['not_stressed', 'stressed', 'not_stressed', 'stressed']
+
+        # prediction with 4 classes
+        livepredictions4 = conv[liveabc[0]]
+        # prediction with 2 classes
+        livepredictions2 = conv2[liveabc[0]]
+
+        print(livepredictions2)
+
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": "stressed"})
+
+
 @app.route('/test', methods=['POST'])
 @token_checker
 def audio_data(current_user):
@@ -410,18 +471,6 @@ def audio_data_web(current_user):
         livepredictions = conv[liveabc[0]]
         print("Result: " + livepredictions)
         return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
-
-
-@app.route('/test_feature', methods=['POST'])
-@token_checker
-def audio_data_feature(current_user):
-
-    data = request.form
-
-    if(data["features"]):
-        print(data["features"])
-
-        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": "stressed"})
 
 
 if __name__ == '__main__':

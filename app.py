@@ -328,7 +328,7 @@ def audio_data_feature(current_user):
 
         print(livepredictions2)
 
-        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": "stressed"})
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions2})
 
 
 @app.route('/test', methods=['POST'])

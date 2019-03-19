@@ -467,9 +467,12 @@ def audio_data(current_user):
 
         # ////Add new fdata entry
         new_fdata = Fdata(user_id=current_user.user_id,
-                          mood=livepredictions, hbeat=75, weight=78)
+                          mood=livepredictions, hbeat=75, weight=78, date=datetime.datetime.utcnow())
 
-        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
+        db.session.add(new_fdata)
+        db.session.commit()
+
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions, "fdata_id": new_fdata.id})
 
 
 @app.route('/test_web', methods=['POST'])

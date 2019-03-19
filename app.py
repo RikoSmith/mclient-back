@@ -1,5 +1,6 @@
 import os.path
 import os
+import threading
 import datetime
 import base64
 import json
@@ -84,11 +85,11 @@ class Fdata(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(150))
     weight = db.Column(db.Integer)
-    mood = db.Column(db.String(200))1
+    mood = db.Column(db.String(200))
     hbeat = db.Column(db.Integer)
     todos = db.Column(db.Integer)
-    date = db.Column(db.DateTime, default = datetime.datetime.utcnow)
-    feedback = db.Column(db.Boolean, default= True)
+    date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    feedback = db.Column(db.Boolean, default=True)
 
 
 class Stats(db.Model):
@@ -463,6 +464,11 @@ def audio_data(current_user):
         livepredictions = conv[liveabc[0]]
         print("Result: " + livepredictions)
         # os.remove('tempFiles/audio.wav')
+
+        # ////Add new fdata entry
+        new_fdata = Fdata(user_id=current_user.user_id,
+                          mood=livepredictions, hbeat=75, weight=78)
+
         return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
 
 

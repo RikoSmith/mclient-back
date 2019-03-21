@@ -552,8 +552,8 @@ def feedback_handler(current_user):
 
     data = request.form
     files = request.files
-    print(data)
-    print(request.files)
+    # print(data)
+    # print(request.files)
 
     fdata = Fdata.query.filter_by(id=data["lastId"]).first()
     if (data["feedback"] == 'false'):
@@ -561,7 +561,7 @@ def feedback_handler(current_user):
     else:
         fdata.feedback = True
     db.session.commit()
-    print(fdata.feedback)
+    # print(fdata.feedback)
 
     return jsonify({"ok": "true", "message": "Updated last record: " + data["lastId"]})
 
@@ -576,7 +576,7 @@ def get_user_fdata10(current_user):
     if not udata:
         return jsonify({"ok": "false", "message": "No data to display"})
 
-    print(udata)
+    # print(udata)
     fdataList = []
     for fd in udata:
         f = {}
@@ -584,7 +584,7 @@ def get_user_fdata10(current_user):
         f["date"] = fd.date + timedelta(hours=6)
         f["feedback"] = fd.feedback
         fdataList.append(f)
-    print(fdataList)
+    # print(fdataList)
 
     return jsonify({"ok": "true", "fdataList": fdataList})
 

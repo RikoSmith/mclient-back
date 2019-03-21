@@ -565,5 +565,28 @@ def feedback_handler(current_user):
     return jsonify({"ok": "true", "message": "Updated last record: " + data["lastId"]})
 
 
+@app.route('/fdata10', methods=['GET'])
+@token_checker
+def get_user_fdata10(current_user):
+    print(current_user.user_id)
+    udata = Fdata.query.filter_by(
+        user_id=current_user.user_id).order_by(Fdata.id.desc()).limit(10).all()
+
+    if not udata:
+        return jsonify({"ok": "false", "message": "No data to display"})
+
+    print(udata)
+    fdataList = []
+    for fd in udata:
+        f = {}
+        f["mood"] = fd.mood
+        f["date"] = fd.date
+        f["feedback"] = fd.feedback
+        fdataList.append(f)
+    print(fdataList)
+
+    return jsonify({"ok": "true", "fdataList": fdataList})
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

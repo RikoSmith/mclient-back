@@ -36,9 +36,9 @@ from keras.layers import Input, Flatten, Dropout  # , Activation
 from flask_cors import CORS, cross_origin
 
 
-#from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
-#from tensorflow.keras.models import Sequential
-#from tensorflow.keras.layers import LSTM, Activation, Dense,  Embedding
+# from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Activation, Dense,  Embedding
 
 
 app = Flask(__name__)
@@ -402,7 +402,7 @@ def audio_data(current_user):
 
     if(data["audio"]):
         # print(data["audio"])
-        #audio_64 = base64.b64decode(data["audio"] + '=' * (-len(data["audio"]) % 4))
+        # audio_64 = base64.b64decode(data["audio"] + '=' * (-len(data["audio"]) % 4))
         print("Audio: start")
         print(data["audio"][0:100])
         audio_64 = base64.b64decode(data["audio"])
@@ -542,6 +542,27 @@ def audio_data_web(current_user):
         livepredictions = conv[liveabc[0]]
         print("Result: " + livepredictions)
         return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions})
+
+
+@app.route('/feedback', methods=['POST'])
+@token_checker
+@cross_origin()
+def feedback_handler(current_user):
+
+    data = request.form
+    files = request.files
+    print(data)
+    print(request.files)
+
+    fdata = Fdata.query.filter_by(id=data["lastId"]).first()
+    if (data["feedback"] == 'false'):
+        fdata.feedback = False
+    else:
+        fdata.feedback = True
+    db.session.commit()
+    print(fdata.feedback)
+
+    return jsonify({"ok": "true", "message": "Updated last record: " + data["lastId"]})
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ import os.path
 import os
 import threading
 import datetime
+from datetime import timedelta
 import base64
 import json
 import librosa
@@ -580,7 +581,7 @@ def get_user_fdata10(current_user):
     for fd in udata:
         f = {}
         f["mood"] = fd.mood
-        f["date"] = fd.date
+        f["date"] = fd.date + timedelta(hours=6)
         f["feedback"] = fd.feedback
         fdataList.append(f)
     print(fdataList)

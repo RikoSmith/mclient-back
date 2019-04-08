@@ -141,6 +141,8 @@ def login():
     if check_password_hash(user.password, auth.password):
         token = jwt.encode({'user_id': user.user_id, 'exp': datetime.datetime.utcnow(
         ) + datetime.timedelta(hours=168)}, app.config['SECRET_KEY'])
+        print("User logged in:")
+        print(user.user_id)
         return jsonify({"ok": True, "token": token.decode('UTF-8')})
 
     return make_response('Verification error', 401, {"WWW-Authentificate": "Login required"})

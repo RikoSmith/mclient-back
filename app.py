@@ -573,7 +573,7 @@ def feedback_handler(current_user):
 def get_user_fdata10(current_user):
     print(current_user.user_id)
     udata = Fdata.query.filter_by(
-        user_id=current_user.user_id).order_by(Fdata.id.desc()).limit(10).all()
+        user_id=current_user.user_id).order_by(Fdata.id.desc()).limit(15).all()
 
     if not udata:
         return jsonify({"ok": "false", "message": "No data to display"})

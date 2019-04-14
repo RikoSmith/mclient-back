@@ -35,6 +35,7 @@ import datetime
 from functools import wraps
 from keras.layers import Input, Flatten, Dropout  # , Activation
 from flask_cors import CORS, cross_origin
+from random import randint
 
 
 # from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
@@ -395,7 +396,21 @@ def audio_data_feature(current_user):
 
         print(livepredictions2)
 
-        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions2})
+        s_grad = ["Stressed", "A litle stressed", "Quite stressed",
+                  "Moderately stressed", "Slightly stressed"]
+
+        ns_grad = ["Happy", "Moderate", "Stressless", "Normal", "Good"]
+
+        mood_text = ""
+
+        if(livepredictions2 == "stressed"):
+            rn = randint(0, len(s_grad)-1)
+            mood_text = s_grad[rn]
+        else:
+            rn = randint(0, len(ns_grad)-1)
+            mood_text = ns_grad[rn]
+
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions2, "mood_text": mood_text})
 
 
 @app.route('/test', methods=['POST'])

@@ -188,7 +188,7 @@ def get_user_data(current_user):
 @token_checker
 def get_user_fdata(current_user):
     print(current_user.user_id)
-    udata = Fdata.query.filter_by(user_id=current_user.user_id).first()
+    udata = Fdata.query.filter_by(user_id=current_user.user_id).last()
 
     if not udata:
         return jsonify({"ok": "false", "message": "No data to display"})

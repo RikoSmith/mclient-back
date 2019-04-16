@@ -189,8 +189,31 @@ def get_user_data(current_user):
 @token_checker
 def get_user_fdata(current_user):
     print(current_user.user_id)
+
+    date_day_start = datetime.datetime.utcnow().replace(
+        hour=0, minute=0, second=0, microsecond=0)
+
+    date_week_start = (datetime.datetime.utcnow() - timedelta(days=6)).replace(
+        hour=0, minute=0, second=0, microsecond=0)
+
+    print(date_week_start)
+
     udata = Fdata.query.filter_by(
         user_id=current_user.user_id).order_by(Fdata.id.desc()).first()
+
+    udata_day_str = Fdata.query.filter_by(
+        user_id=current_user.user_id).filter_by(mood="stressed").filter(date_day_start <= Fdata.date).all()
+
+    udata_day_nstr = Fdata.query.filter_by(
+        user_id=current_user.user_id).filter_by(mood="not_stressed").filter(date_day_start <= Fdata.date).all()
+
+    udata_week_str = Fdata.query.filter_by(
+        user_id=current_user.user_id).filter_by(mood="stressed").filter(date_week_start <= Fdata.date).all()
+
+    udata_week_nstr = Fdata.query.filter_by(
+        user_id=current_user.user_id).filter_by(mood="not_stressed").filter(date_week_start <= Fdata.date).all()
+
+    print(udata_week_nstr)
 
     if not udata:
         return jsonify({"ok": "false", "message": "No data to display"})
@@ -199,6 +222,10 @@ def get_user_fdata(current_user):
     user_fdata["mood"] = udata.mood
     user_fdata["weight"] = udata.weight
     user_fdata["hbeat"] = udata.hbeat
+    user_fdata["udata_day_str"] = len(udata_day_str)
+    user_fdata["udata_day_nstr"] = len(udata_day_nstr)
+    user_fdata["udata_week_str"] = len(udata_week_str)
+    user_fdata["udata_week_nstr"] = len(udata_week_nstr)
 
     return jsonify({"ok": "true", "fdata": user_fdata})
 
@@ -483,15 +510,28 @@ def audio_data(current_user):
         livepredictions = conv[liveabc[0]]
         print("Result: " + livepredictions)
         # os.remove('tempFiles/audio.wav')
+        s_grad = ["Stressed", "A litle stressed", "Quite stressed",
+                  "Moderately stressed", "Slightly stressed"]
+
+        ns_grad = ["Happy", "Moderate", "Stressless", "Normal", "Good"]
+
+        mood_text = ""
+
+        if(livepredictions2 == "stressed"):
+            rn = randint(0, len(s_grad)-1)
+            mood_text = s_grad[rn]
+        else:
+            rn = randint(0, len(ns_grad)-1)
+            mood_text = ns_grad[rn]
 
         # ////Add new fdata entry
         new_fdata = Fdata(user_id=current_user.user_id,
-                          mood=livepredictions, hbeat=75, weight=78, date=datetime.datetime.utcnow())
+                          mood=livepredictions, hbeat=75, weight=78, date=datetime.datetime.utcnow(), mood_text=mood_text)
 
         db.session.add(new_fdata)
         db.session.commit()
 
-        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions, "fdata_id": new_fdata.id})
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions, "fdata_id": new_fdata.id, "mood_text": mood_text})
 
 
 @app.route('/test_web', methods=['POST'])

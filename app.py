@@ -519,7 +519,7 @@ def audio_data(current_user):
 
         mood_text = ""
 
-        if(livepredictions2 == "stressed"):
+        if(livepredictions == "stressed"):
             rn = randint(0, len(s_grad)-1)
             mood_text = s_grad[rn]
         else:

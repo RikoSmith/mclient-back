@@ -220,6 +220,7 @@ def get_user_fdata(current_user):
 
     user_fdata = {}
     user_fdata["mood"] = udata.mood
+    user_fdata["mood_text"] = udata.mood_text
     user_fdata["weight"] = udata.weight
     user_fdata["hbeat"] = udata.hbeat
     user_fdata["udata_day_str"] = len(udata_day_str)

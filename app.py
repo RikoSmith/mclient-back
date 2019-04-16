@@ -92,6 +92,7 @@ class Fdata(db.Model):
     todos = db.Column(db.Integer)
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     feedback = db.Column(db.Boolean, default=True)
+    mood_text = db.Column(db.String(200))
 
 
 class Stats(db.Model):

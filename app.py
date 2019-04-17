@@ -93,6 +93,7 @@ class Fdata(db.Model):
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     feedback = db.Column(db.Boolean, default=True)
     mood_text = db.Column(db.String(200))
+    features = db.Column(db.Text())
 
 
 class Stats(db.Model):
@@ -128,6 +129,34 @@ def token_checker(f):
     return decorated
 
 
+def getPrediction(eng_stress_model, livecnn):
+    #predict!
+    livepreds = eng_stress_model.predict(livecnn, 
+                            batch_size=32, 
+                            verbose=1)
+
+    #convert prediction to text
+    livepreds1 = livepreds.argmax(axis=1)
+    liveabc = livepreds1.astype(int).flatten()
+    conv = ['female_not_stressed', 'female_stressed', 'male_not_stressed',
+        'male_stressed']
+
+    #array for conversion into binary class (stressed/not_stressed)
+    conv2 = ['not_stressed', 'stressed', 'not_stressed', 'stressed']
+
+    #prediction with 4 classes
+    livepredictions4 = conv[liveabc[0]]
+    #prediction with 2 classes
+    livepredictions2 = conv2[liveabc[0]]
+    
+    return livepredictions2
+
+def extract_feature(file_name, offst=0.1):
+    X, sample_rate = librosa.load(
+        file_name, res_type='kaiser_fast', offset=offst)
+    mfccs = np.mean(librosa.feature.mfcc(
+        y=X, sr=sample_rate, n_mfcc=64).T, axis=0)
+    return mfccs
 # ---------------------- ROUTES --------------------------------------
 @app.route('/login', methods=['POST'])
 def login():
@@ -158,10 +187,10 @@ def signup():
     new_user = User(user_id=str(uuid.uuid4(
     )), uname=data['uname'], name=data['name'], lname=data['lname'], sex=data['sex'], password=hashed_password)
 
-    if(data['quote']):
+    if data['quote'] is not None:
         new_user.quote = data['quote']
 
-    if(data['country']):
+    if data['country'] is not None:
         new_user.country = data['country']
 
     db.session.add(new_user)
@@ -184,6 +213,47 @@ def get_user_data(current_user):
     user_data["country"] = user.country
 
     return jsonify({"ok": "true", "user": user_data})
+
+@app.route('/user_change', methods=['POST'])
+@token_checker
+def change_user_data(current_user):
+    data = request.get_json()
+    user = User.query.filter_by(uname=current_user.uname).first()
+    
+    if data['name'] is not None:
+        user.name = data['name']
+    
+    if hasattr(data, 'lname'):
+        user.lname = data['lname']
+
+    if data['country'] is not None:
+        user.country = data['country']
+    
+    if data['sex'] is not None:
+        user.sex = data['sex']
+    
+    if data['quote'] is not None:
+        user.quote = data['quote']
+    
+    if data['weight'] is not None:
+        user.weight = data['weight']
+    
+
+    user_data = {}
+    user_data["id"] = user.id
+    user_data["user_id"] = user.user_id
+    user_data["uname"] = user.uname
+    user_data["name"] = user.name
+    user_data["lname"] = user.lname
+    user_data["quote"] = user.quote
+    user_data["sex"] = user.sex
+    user_data["country"] = user.country
+    user_data["weight"] = user.weight
+
+    db.session.commit()
+
+
+    return jsonify({"ok": "true", "new_data": user_data})
 
 
 @app.route('/fdata', methods=['GET'])
@@ -442,7 +512,7 @@ def audio_data_feature(current_user):
         return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions2, "mood_text": mood_text})
 
 
-@app.route('/test', methods=['POST'])
+@app.route('/test_pre_control', methods=['POST'])
 @token_checker
 def audio_data(current_user):
 
@@ -528,7 +598,92 @@ def audio_data(current_user):
 
         # ////Add new fdata entry
         new_fdata = Fdata(user_id=current_user.user_id,
-                          mood=livepredictions, hbeat=75, weight=78, date=datetime.datetime.utcnow(), mood_text=mood_text)
+                          mood=livepredictions, hbeat=75, weight=99, date=datetime.datetime.utcnow(), mood_text=mood_text)
+
+        db.session.add(new_fdata)
+        db.session.commit()
+
+        return jsonify({"ok": "true", "message": "Fdata updated", "new_mood": livepredictions, "fdata_id": new_fdata.id, "mood_text": mood_text})
+
+
+
+@app.route('/test', methods=['POST'])
+@token_checker
+def audio_data_user_tuned(current_user):
+
+    data = request.form
+    user = User.query.filter_by(uname=current_user.uname).first()
+
+    if(data["audio"]):
+        # print(data["audio"])
+        # audio_64 = base64.b64decode(data["audio"] + '=' * (-len(data["audio"]) % 4))
+        print("Audio: start")
+        print(data["audio"][0:100])
+        audio_64 = base64.b64decode(data["audio"])
+        # os.remove('tempFiles/audio.wav')
+        audio_file = open('tempFiles/audio.wav', 'wb')
+        audio_file.write(audio_64)
+        audio_file.close()
+
+        mfccs = extract_feature(
+            'tempFiles/audio.wav', 0)
+        
+        print(mfccs)
+
+        live = pd.DataFrame(data=mfccs)
+        live = live.stack().to_frame().T
+
+        livecnn = np.expand_dims(live, axis=2)
+
+        #loading models from disk
+        path_to_users_model_folder = 'model#' + user.user_id
+        path_to_def_model_folder = 'model'
+
+        if os.path.isdir(path_to_users_model_folder):
+            print("exists")
+            model_path = path_to_users_model_folder + '/' + user.user_id + '_Stress_recog_64MFCC_with_gender.json'
+            weights_path = path_to_users_model_folder + '/' + user.user_id + '_Stress_recog_64MFCC_with_gender.h5'
+        else:
+            print("not exists")
+            model_path = path_to_def_model_folder + '/' + 'Stress_recog_64MFCC_with_gender.json'
+            weights_path = path_to_def_model_folder + '/' + 'Stress_recog_64MFCC_with_gender.h5'
+
+        # loading json and creating model with 4 classes
+        from keras.models import model_from_json
+        json_file5 = open(model_path, 'r')
+        eng2 = json_file5.read()
+        json_file5.close()
+        eng_stress_model = model_from_json(eng2)
+
+        # load weights into new model
+        eng_stress_model.load_weights(weights_path)
+        print("Loaded model from disk")
+
+        #compile the model
+        opt = keras.optimizers.rmsprop(lr=0.00001, decay=1e-6)
+        eng_stress_model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+
+        livepredictions = getPrediction(eng_stress_model, livecnn)
+        print("Result: " + livepredictions)
+        # os.remove('tempFiles/audio.wav')
+        s_grad = ["Stressed", "A litle stressed", "Quite stressed",
+                  "Moderately stressed", "Slightly stressed"]
+
+        ns_grad = ["Happy", "Moderate", "Stressless", "Normal", "Good"]
+
+        mood_text = ""
+
+        if(livepredictions == "stressed"):
+            rn = randint(0, len(s_grad)-1)
+            mood_text = s_grad[rn]
+        else:
+            rn = randint(0, len(ns_grad)-1)
+            mood_text = ns_grad[rn]
+
+        mfccs_str = "" + base64.b64encode(mfccs).decode()
+        # ////Add new fdata entry
+        new_fdata = Fdata(user_id=current_user.user_id,
+                          mood=livepredictions, hbeat=75, weight=78, date=datetime.datetime.utcnow(), mood_text=mood_text, features=mfccs_str)
 
         db.session.add(new_fdata)
         db.session.commit()
@@ -616,6 +771,8 @@ def feedback_handler(current_user):
     # print(request.files)
 
     fdata = Fdata.query.filter_by(id=data["lastId"]).first()
+    user = User.query.filter_by(uname=current_user.uname).first()
+
     if (data["feedback"] == 'false'):
         fdata.feedback = False
     else:
@@ -623,7 +780,117 @@ def feedback_handler(current_user):
     db.session.commit()
     # print(fdata.feedback)
 
-    return jsonify({"ok": "true", "message": "Updated last record: " + data["lastId"]})
+    # feedback and user_male are info that is taken from the user!!!!!!!!!!!!!!!!
+    liveabc = None
+    user_male = (user.sex == 'M')
+    liveprediction = fdata.mood
+
+    #mapping male and predicition from data to liveabc
+    if user_male:
+        if liveprediction == "stressed":
+            liveabc = 3
+        else:
+            liveabc = 2
+    else:
+        if liveprediction == "stressed":
+            liveabc = 1
+        else:
+            liveabc = 0
+    
+    #loading models from disk
+    path_to_users_model_folder = 'model#' + user.user_id
+    path_to_def_model_folder = 'model'
+
+    if os.path.isdir(path_to_users_model_folder):
+        print("exists")
+        model_path = path_to_users_model_folder + '/' + user.user_id + '_Stress_recog_64MFCC_with_gender.json'
+        weights_path = path_to_users_model_folder + '/' + user.user_id + '_Stress_recog_64MFCC_with_gender.h5'
+    else:
+        print("not exists")
+        model_path = path_to_def_model_folder + '/' + 'Stress_recog_64MFCC_with_gender.json'
+        weights_path = path_to_def_model_folder + '/' + 'Stress_recog_64MFCC_with_gender.h5'
+
+    # loading json and creating model with 4 classes
+    from keras.models import model_from_json
+    json_file5 = open(model_path, 'r')
+    eng2 = json_file5.read()
+    json_file5.close()
+    eng_stress_model = model_from_json(eng2)
+
+    # load weights into new model
+    eng_stress_model.load_weights(weights_path)
+    print("Loaded model from disk")
+    
+    epNum = 0
+    if user_male == True:
+        it = (liveabc + 1) % 2 + 2
+    else:
+        it = (liveabc + 1) % 2
+    conv2 = ['not_stressed', 'stressed', 'not_stressed', 'stressed']
+    
+    check_pred = conv2[it]
+    while(True):
+        if data["feedback"] == 'false' and liveprediction != check_pred and epNum <= 10:
+            
+
+            for layer in eng_stress_model.layers[:14]:
+                layer.trainable=False
+            for layer in eng_stress_model.layers[14:]:
+                layer.trainable=True
+
+            #compile the model
+            opt = keras.optimizers.rmsprop(lr=0.00001, decay=1e-6)
+
+            eng_stress_model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+
+            y_train = np.zeros((1, 4))
+            y_train[0][it] = 1
+
+            mfccs_str = fdata.features
+            mfccs_buff = base64.decodebytes(mfccs_str.encode())
+            mfccs = np.frombuffer(mfccs_buff, dtype=np.float64)
+            #print(mfccs)
+
+
+            live = pd.DataFrame(data=mfccs)
+            live = live.stack().to_frame().T
+
+            livecnn = np.expand_dims(live, axis=2)
+
+            eng_stress_model.fit(livecnn, y_train, batch_size=32, epochs=1, validation_data=(livecnn, y_train))
+
+
+            liveprediction = getPrediction(eng_stress_model, livecnn)
+
+            epNum += 1
+
+            print("liveprediction: " + liveprediction)
+            print("check_pred: " + check_pred)
+
+        else:
+            break
+        print(epNum)
+
+    if epNum > 0:
+        user_model_path = path_to_users_model_folder + '/' + user.user_id + '_Stress_recog_64MFCC_with_gender.json'
+        user_weights_path = path_to_users_model_folder + '/' + user.user_id + '_Stress_recog_64MFCC_with_gender.h5'
+
+        model_name = user.user_id + '_Stress_recog_64MFCC_with_gender.h5'
+        save_dir = path_to_users_model_folder
+        # Save model and weights
+        if not os.path.isdir(save_dir):
+            os.makedirs(save_dir)
+
+        model_path = os.path.join(save_dir, model_name)
+        eng_stress_model.save(model_path)
+        print('Saved trained model at %s ' % model_path)
+
+        import json
+        model_json = eng_stress_model.to_json()
+        with open(user_model_path, "w") as json_file:
+            json_file.write(model_json)
+
+    return jsonify({"ok": "true", "message": "Updated last record and (probably) tuned model: " + data["lastId"]})
 
 
 @app.route('/fdata10', methods=['GET'])

@@ -830,7 +830,7 @@ def feedback_handler(current_user):
     
     check_pred = conv2[it]
     while(True):
-        if (data["feedback"] == 'false') and (liveprediction != check_pred) and (epNum <= 7):
+        if (data["feedback"] == 'false') and (liveprediction != check_pred) and (epNum <= 3):
             
 
             for layer in eng_stress_model.layers[:14]:

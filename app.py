@@ -687,6 +687,7 @@ def audio_data_user_tuned(current_user):
         mfccs_str = "" + base64.b64encode(mfccs).decode()
         # ////Add new fdata entry
         user = User.query.filter_by(uname=current_user.uname).first()
+        print(user.weight)
         new_fdata = Fdata(user_id=current_user.user_id,
                           mood=livepredictions, hbeat=75, weight=user.weight, date=datetime.datetime.utcnow(), mood_text=mood_text, features=mfccs_str)
 

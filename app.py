@@ -67,6 +67,7 @@ class User(db.Model):
     sex = db.Column(db.String(1))
     country = db.Column(db.String(150))
     password = db.Column(db.String(80))
+    weight = db.Column(db.Integer())
 
 
 class Todo(db.Model):

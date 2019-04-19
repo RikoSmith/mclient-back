@@ -267,7 +267,7 @@ def get_user_fdata(current_user):
     date_week_start = (datetime.datetime.utcnow() - timedelta(days=6)).replace(
         hour=0, minute=0, second=0, microsecond=0)
 
-    print(date_week_start)
+    #print(date_week_start)
 
     udata = Fdata.query.filter_by(
         user_id=current_user.user_id).order_by(Fdata.id.desc()).first()
@@ -284,7 +284,7 @@ def get_user_fdata(current_user):
     udata_week_nstr = Fdata.query.filter_by(
         user_id=current_user.user_id).filter_by(mood="not_stressed").filter(date_week_start <= Fdata.date).all()
 
-    print(udata_week_nstr)
+    #print(udata_week_nstr)
 
     if not udata:
         return jsonify({"ok": "false", "message": "No data to display"})
@@ -628,7 +628,7 @@ def audio_data_user_tuned(current_user):
         mfccs = extract_feature(
             'tempFiles/audio.wav', 0)
         
-        print(mfccs)
+        #print(mfccs)
 
         live = pd.DataFrame(data=mfccs)
         live = live.stack().to_frame().T

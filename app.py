@@ -193,6 +193,9 @@ def signup():
     if data['country'] is not None:
         new_user.country = data['country']
 
+    if data['weight'] is not None:
+        new_user.weight = data['weight']
+
     db.session.add(new_user)
     db.session.commit()
     return jsonify({"ok": True, "message": "New user created!"})
